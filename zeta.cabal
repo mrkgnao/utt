@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4235403f107ceaf413baa94b2d27b34d36a52a67bec34852f7d983a3e2c9618d
+-- hash: ff26ffd9705c1816e4e2d89441939b3a83265d0a9efe5d678d78ce18372f06e1
 
 name:           zeta
 version:        0.1.0.0
@@ -28,7 +28,7 @@ executable zeta
       Types
       Paths_zeta
   hs-source-dirs:
-      src
+      lib
   default-extensions: LambdaCase
   build-depends:
       QuickCheck
