@@ -1,6 +1,6 @@
-name: zeta
+name: utt
 version: 0.1.0.0
-github: mrkgnao/zeta
+github: mrkgnao/utt
 synopsis: 
 description: 
 license: GPL-3
@@ -21,6 +21,7 @@ dependencies:
   - base
   - bound
   - prettyprinter
+  - prettyprinter-ansi-terminal
   - deriving-compat
   - lens
   - containers

@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ff26ffd9705c1816e4e2d89441939b3a83265d0a9efe5d678d78ce18372f06e1
+-- hash: f4d40ebb204294e10db6ff2cf50f669c11da2f4e6f9b368d4d83d4d3a469f9a3
 
 name:           zeta
 version:        0.1.0.0
@@ -25,6 +25,7 @@ source-repository head
 executable zeta
   main-is: Main.hs
   other-modules:
+      Pretty
       Types
       Paths_zeta
   hs-source-dirs:
@@ -40,6 +41,7 @@ executable zeta
     , lens
     , mtl
     , prettyprinter
+    , prettyprinter-ansi-terminal
     , text
     , vector
   default-language: Haskell2010

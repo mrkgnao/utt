@@ -127,16 +127,15 @@ pattern Dep q h t s <- (preview depTT -> Just (q, h, t, s))
   where Dep q h t s = review depTT (q, h, t, s)
 
 pattern Fst t = Proj FstComp t
+
 pattern Snd t = Proj SndComp t
 
 depTT :: Prism' (TT a) (DepQuant, NameHint, TT a, Scope1 TT a)
 depTT = prism' fromDep toDep
   where
-    toDep :: TT a -> Maybe (DepQuant, NameHint, TT a, Scope1 TT a)
     toDep (Sigma h t s) = Just (DepSigma, h, t, s)
     toDep (Pi h t s)    = Just (DepPi, h, t, s)
     toDep _             = Nothing
-    fromDep :: (DepQuant, NameHint, TT a, Scope1 TT a) -> TT a
     fromDep (DepSigma, h, t, s) = Sigma h t s
     fromDep (DepPi, h, t, s)    = Pi h t s
 
@@ -198,35 +197,13 @@ log x = do
   -- traceM (Text.unpack msg)
   tell [msg]
 
-logS :: Pretty a => a -> TcM ()
-logS = log . ppr
+logS :: Show a => a -> TcM ()
+logS = log . tshow
 
 tshow :: Show a => a -> Text
 tshow = Text.pack . show
 
 snocTele (Tele te) v = Tele (Vector.snoc te v)
-
-class Pretty a where
-  ppr :: a -> Text
-
-instance Pretty Text where
-  ppr = id
-
-instance Pretty TeleVar where
-  ppr = tshow
-
-instance Pretty Void where
-  ppr v = error "impossible"
-
--- instance Pretty a => Pretty (TeleArg a) where ppr (TeleArg h  vs) = _ vs
--- instance Pretty a => Pretty (Tele a) where ppr (Tele vs) = _ vs
-instance (Show a, Pretty a) => Pretty (TT a) where
-  ppr (Var t) = ppr t
-  ppr (Pi (Hint h) t s) =
-    "(" <> h <> " : " <> ppr t <> ") -> " <> "(" <>
-    ppr (instantiate1 (Var h) (ppr <$> s)) <>
-    ")"
-  ppr x = tshow x
 
 data InferResult a = InferResult
   { infer_inferredType  :: !(TT a)
@@ -241,10 +218,10 @@ infer :: Tele TeleVar -> TT TeleVar -> TcM (InferResult TeleVar)
 infer tele tt =
   local (+ 1) $ do
     log ("tele: " <> tshow tele)
-    log ("in: " <> ppr tt)
+    log ("in: " <> tshow tt)
     res@(InferResult ty red) <- infer' tele tt
-    log ("red: " <> ppr red)
-    log ("type: " <> ppr ty)
+    log ("red: " <> tshow red)
+    log ("type: " <> tshow ty)
     log ""
     pure res
 
@@ -294,9 +271,9 @@ check :: Tele TeleVar -> TT TeleVar -> TT TeleVar -> TcM (CheckResult TeleVar)
 check tele tt ty =
   local (+ 1) $ do
     log ("tele: " <> tshow tele)
-    log ("in: " <> ppr tt)
+    log ("in: " <> tshow tt)
     res@(CheckResult red) <- check' tele tt ty
-    log ("red: " <> ppr red)
+    log ("red: " <> tshow red)
     log ""
     pure res
 
@@ -327,7 +304,8 @@ subtypeWHNF :: Tele TeleVar -> TT TeleVar -> TT TeleVar -> TcM ()
 subtypeWHNF g a b = subtypeWHNF' g a b
 
 subtypeWHNF' :: Tele TeleVar -> TT TeleVar -> TT TeleVar -> TcM ()
-subtypeWHNF' _ (Set i) (Set j) | j == i + 1 = pure ()
+subtypeWHNF' _ (Set i) (Set j)
+  | j == i + 1 = pure ()
 subtypeWHNF' g (Dep q x a1 b1) (Dep q' _ a2 b2)
   | q /= q' = throwError []
   | q == q' = do
@@ -347,7 +325,8 @@ converts g s t a = do
   convertsWHNF g s' t' a'
 
 convertsWHNF :: Tele TeleVar -> TT TeleVar -> TT TeleVar -> TT TeleVar -> TcM ()
-convertsWHNF g (Set i) (Set j) SomeSet | i == j = pure ()
+convertsWHNF g (Set i) (Set j) SomeSet
+  | i == j = pure ()
 convertsWHNF g (Dep q x a1 b1) (Dep q' _ a2 b2) SomeSet
   | q /= q' = throwError []
   | q == q' = do
@@ -363,7 +342,9 @@ convertsWHNF g s t (Sigma x a b) = do
   converts g (Fst s) (Fst t) a
   converts g (Snd s) (Snd t) (instantiate1 (Fst s) b)
 convertsWHNF _ _ _ Unit = pure ()
--- FIXME neutral case
+convertsWHNF g s t _ = do
+  _ <- neutralEqual g s t
+  pure ()
 
 neutralEqual :: Tele TeleVar -> TT TeleVar -> TT TeleVar -> TcM (TT TeleVar)
 neutralEqual g var@(Var (TeleVar v)) var' = do
@@ -432,5 +413,9 @@ applyType =
   "A" -: Set 0 ~>
   "B" -: Set 0 ~>
   "a" -: Var "A" ~> "f" -: ("_" -: Var "A" ~> Var "B") ~> Var "B"
+applyExpr :: TT TeleVar
+applyExpr = 
+  closed' $ 
+    lam_ "A" $ lam_ "B" $ lam_ "a" $ lam_ "f" $ App (Var "f") (Var "a")
 
 closed' = fromMaybe (error "boom") . closed
